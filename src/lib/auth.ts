@@ -17,7 +17,11 @@ export const authOptions: AuthOptions = {
   ],
   callbacks: {
     async signIn({ account }) {
-      if (!account?.access_token) return false;
+      console.log("[AUTH] signIn callback triggered");
+      if (!account?.access_token) {
+        console.log("[AUTH] No access token");
+        return false;
+      }
 
       // Check if user is a member of the required guild
       try {
@@ -27,19 +31,28 @@ export const authOptions: AuthOptions = {
           },
         });
 
-        if (!res.ok) return false;
+        console.log("[AUTH] Discord guilds API status:", res.status);
+        if (!res.ok) {
+          const text = await res.text();
+          console.log("[AUTH] Discord API error:", text);
+          return false;
+        }
 
         const guilds = await res.json();
+        console.log("[AUTH] Found guilds:", guilds.length, "Checking for:", DISCORD_GUILD_ID);
         const isMember = guilds.some(
           (guild: { id: string }) => guild.id === DISCORD_GUILD_ID
         );
 
         if (!isMember) {
+          console.log("[AUTH] User not a member of guild");
           return "/auth/error?error=not_member";
         }
 
+        console.log("[AUTH] User is a member, allowing sign in");
         return true;
-      } catch {
+      } catch (error) {
+        console.log("[AUTH] Error during sign in:", error);
         return false;
       }
     },
@@ -62,6 +75,7 @@ export const authOptions: AuthOptions = {
       return session;
     },
   },
+  debug: true,
   pages: {
     error: "/auth/error",
   },
