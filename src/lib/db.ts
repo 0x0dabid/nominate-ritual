@@ -1,41 +1,32 @@
-import Database from "better-sqlite3";
-import path from "path";
+import { neon } from "@neondatabase/serverless";
 
-const dbPath = path.join(process.cwd(), "synful.db");
-
-let db: Database.Database;
-
-function getDb(): Database.Database {
-  if (!db) {
-    db = new Database(dbPath);
-    db.pragma("journal_mode = WAL");
-    db.pragma("foreign_keys = ON");
-    initDb(db);
-  }
-  return db;
+export function getDb() {
+  return neon(process.env.DATABASE_URL!);
 }
 
-function initDb(db: Database.Database) {
-  db.exec(`
+export async function initDb() {
+  const sql = getDb();
+
+  await sql`
     CREATE TABLE IF NOT EXISTS nominees (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       username TEXT NOT NULL,
       discord_id TEXT,
-      role TEXT NOT NULL CHECK(role IN ('Radiant Ritualist', 'Ritualist', 'ritty', 'ritty bitty')),
+      role TEXT NOT NULL,
       nominator TEXT NOT NULL,
       votes INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(username, role)
-    );
+    )
+  `;
 
+  await sql`
     CREATE TABLE IF NOT EXISTS votes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       voter_id TEXT NOT NULL,
       nominee_id INTEGER NOT NULL REFERENCES nominees(id),
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(voter_id, nominee_id)
-    );
-  `);
+    )
+  `;
 }
-
-export default getDb;

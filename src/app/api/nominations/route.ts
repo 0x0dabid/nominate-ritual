@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import { getDb } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,26 +23,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
-    const db = getDb();
+    const sql = getDb();
 
-    const existing = db
-      .prepare("SELECT id FROM nominees WHERE username = ? AND role = ?")
-      .get(username, role);
+    const existing = await sql`
+      SELECT id FROM nominees WHERE username = ${username} AND role = ${role}
+    `;
 
-    if (existing) {
+    if (existing.length > 0) {
       return NextResponse.json(
         { error: "This user has already been nominated for this role" },
         { status: 409 }
       );
     }
 
-    const stmt = db.prepare(
-      "INSERT INTO nominees (username, discord_id, role, nominator) VALUES (?, ?, ?, ?)"
-    );
-    const result = stmt.run(username, discord_id || null, role, nominator);
+    const result = await sql`
+      INSERT INTO nominees (username, discord_id, role, nominator)
+      VALUES (${username}, ${discord_id || null}, ${role}, ${nominator})
+      RETURNING id
+    `;
 
     return NextResponse.json(
-      { success: true, id: result.lastInsertRowid },
+      { success: true, id: result[0].id },
       { status: 201 }
     );
   } catch {

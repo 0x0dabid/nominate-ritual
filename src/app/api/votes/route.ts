@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import getDb from "@/lib/db";
+import { getDb } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,48 +24,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const db = getDb();
+    const sql = getDb();
 
-    const nominee = db
-      .prepare("SELECT id FROM nominees WHERE id = ?")
-      .get(nominee_id);
-    if (!nominee) {
+    const nominee = await sql`
+      SELECT id FROM nominees WHERE id = ${nominee_id}
+    `;
+    if (nominee.length === 0) {
       return NextResponse.json(
         { error: "Nominee not found" },
         { status: 404 }
       );
     }
 
-    const existingVote = db
-      .prepare("SELECT id FROM votes WHERE voter_id = ? AND nominee_id = ?")
-      .get(voter_id, nominee_id);
+    const existingVote = await sql`
+      SELECT id FROM votes WHERE voter_id = ${voter_id} AND nominee_id = ${nominee_id}
+    `;
 
-    if (existingVote) {
+    if (existingVote.length > 0) {
       return NextResponse.json(
         { error: "Already voted for this nominee" },
         { status: 409 }
       );
     }
 
-    const vote = db.prepare(
-      "INSERT INTO votes (voter_id, nominee_id) VALUES (?, ?)"
-    );
-    const update = db.prepare(
-      "UPDATE nominees SET votes = votes + 1 WHERE id = ?"
-    );
+    await sql`
+      INSERT INTO votes (voter_id, nominee_id) VALUES (${voter_id}, ${nominee_id})
+    `;
+    await sql`
+      UPDATE nominees SET votes = votes + 1 WHERE id = ${nominee_id}
+    `;
 
-    const transaction = db.transaction(() => {
-      vote.run(voter_id, nominee_id);
-      update.run(nominee_id);
-    });
+    const updated = await sql`
+      SELECT votes FROM nominees WHERE id = ${nominee_id}
+    `;
 
-    transaction();
-
-    const updated = db
-      .prepare("SELECT votes FROM nominees WHERE id = ?")
-      .get(nominee_id) as { votes: number };
-
-    return NextResponse.json({ success: true, votes: updated.votes });
+    return NextResponse.json({ success: true, votes: updated[0].votes });
   } catch {
     return NextResponse.json(
       { error: "Internal server error" },

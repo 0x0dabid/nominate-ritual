@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import { getDb } from "@/lib/db";
 
 export async function GET() {
   try {
-    const db = getDb();
-    const nominees = db
-      .prepare("SELECT * FROM nominees ORDER BY votes DESC, created_at ASC")
-      .all();
+    const sql = getDb();
+    const nominees = await sql`
+      SELECT * FROM nominees ORDER BY votes DESC, created_at ASC
+    `;
 
     return NextResponse.json({ nominees });
   } catch {
