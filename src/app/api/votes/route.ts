@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import getDb from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { voter_id, nominee_id } = body;
-
-    if (!voter_id || !nominee_id) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.discordId) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "You must be signed in to vote" },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { nominee_id } = body;
+    const voter_id = session.user.discordId;
+
+    if (!nominee_id) {
+      return NextResponse.json(
+        { error: "Missing nominee_id" },
         { status: 400 }
       );
     }

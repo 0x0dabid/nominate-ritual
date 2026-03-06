@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useSession, signIn } from "next-auth/react";
 import { ROLES } from "@/lib/roles";
 
 interface Nominee {
@@ -15,6 +16,7 @@ interface Nominee {
 }
 
 export default function NomineesPage() {
+  const { data: session } = useSession();
   const [nominees, setNominees] = useState<Nominee[]>([]);
   const [votedFor, setVotedFor] = useState<Set<number>>(new Set());
   const [animatingId, setAnimatingId] = useState<number | null>(null);
@@ -30,26 +32,33 @@ export default function NomineesPage() {
     }
   }, []);
 
+  const fetchMyVotes = useCallback(async () => {
+    try {
+      const res = await fetch("/api/votes/mine");
+      const data = await res.json();
+      setVotedFor(new Set(data.voted_for || []));
+    } catch {
+      // Silent fail
+    }
+  }, []);
+
   useEffect(() => {
     fetchNominees();
-    const stored = localStorage.getItem("synful-votes");
-    if (stored) {
-      setVotedFor(new Set(JSON.parse(stored)));
-    }
-  }, [fetchNominees]);
+    fetchMyVotes();
+  }, [fetchNominees, fetchMyVotes]);
 
   async function handleVote(nomineeId: number) {
+    if (!session?.user) {
+      signIn("discord");
+      return;
+    }
     if (votedFor.has(nomineeId)) return;
-
-    const voterId =
-      localStorage.getItem("synful-voter-id") || crypto.randomUUID();
-    localStorage.setItem("synful-voter-id", voterId);
 
     try {
       const res = await fetch("/api/votes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voter_id: voterId, nominee_id: nomineeId }),
+        body: JSON.stringify({ nominee_id: nomineeId }),
       });
 
       if (res.ok) {
@@ -59,16 +68,14 @@ export default function NomineesPage() {
         const newVoted = new Set(votedFor);
         newVoted.add(nomineeId);
         setVotedFor(newVoted);
-        localStorage.setItem(
-          "synful-votes",
-          JSON.stringify([...newVoted])
-        );
 
         setNominees((prev) =>
           prev.map((n) =>
             n.id === nomineeId ? { ...n, votes: n.votes + 1 } : n
           )
         );
+      } else if (res.status === 401) {
+        signIn("discord");
       }
     } catch {
       // Silent fail
@@ -125,6 +132,14 @@ export default function NomineesPage() {
           <p className="text-gray-400 text-lg">
             Vote for the most devoted members of the Ritual
           </p>
+          {!session?.user && (
+            <button
+              onClick={() => signIn("discord")}
+              className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#5865F2]/20 border border-[#5865F2]/40 text-[#5865F2] hover:bg-[#5865F2]/30 transition-all text-sm font-medium"
+            >
+              Sign in with Discord to vote
+            </button>
+          )}
         </motion.div>
 
         {/* Role Tabs */}
@@ -239,7 +254,9 @@ export default function NomineesPage() {
                         className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                           votedFor.has(nominee.id)
                             ? "bg-white/5 text-gray-500 cursor-not-allowed border border-white/5"
-                            : "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
+                            : session?.user
+                              ? "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
+                              : "bg-[#5865F2]/20 text-[#5865F2] border border-[#5865F2]/30 hover:bg-[#5865F2]/30"
                         }`}
                       >
                         {animatingId === nominee.id ? (
@@ -252,6 +269,8 @@ export default function NomineesPage() {
                           </motion.span>
                         ) : votedFor.has(nominee.id) ? (
                           "Voted"
+                        ) : !session?.user ? (
+                          "Sign in"
                         ) : (
                           <>&#10084; Vote</>
                         )}
