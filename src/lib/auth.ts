@@ -4,6 +4,7 @@ import DiscordProvider from "next-auth/providers/discord";
 const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID!;
 
 export const authOptions: AuthOptions = {
+  trustHost: true,
   providers: [
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID!,
@@ -76,6 +77,17 @@ export const authOptions: AuthOptions = {
     },
   },
   debug: true,
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: true,
+      },
+    },
+  },
   pages: {
     error: "/auth/error",
   },
