@@ -95,41 +95,13 @@ export default function Hero() {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="mb-8 flex justify-center"
         >
-          <svg
-            width="80"
-            height="80"
-            viewBox="0 0 100 100"
-            fill="none"
+          <img
+            src="/logo.svg"
+            alt="Ritual Logo"
+            width={80}
+            height={80}
             className="drop-shadow-[0_0_30px_rgba(59,130,246,0.5)]"
-          >
-            <path
-              d="M50 10L65 30H80L65 50L80 70H65L50 90L35 70H20L35 50L20 30H35L50 10Z"
-              stroke="url(#heroGlow)"
-              strokeWidth="2"
-              fill="url(#heroGlow)"
-              fillOpacity="0.1"
-            />
-            <path
-              d="M50 25L60 40H70L60 50L70 60H60L50 75L40 60H30L40 50L30 40H40L50 25Z"
-              stroke="url(#heroGlow)"
-              strokeWidth="1.5"
-              fill="url(#heroGlow)"
-              fillOpacity="0.15"
-            />
-            <defs>
-              <linearGradient
-                id="heroGlow"
-                x1="20"
-                y1="10"
-                x2="80"
-                y2="90"
-              >
-                <stop offset="0%" stopColor="#3b82f6" />
-                <stop offset="50%" stopColor="#6366f1" />
-                <stop offset="100%" stopColor="#8b5cf6" />
-              </linearGradient>
-            </defs>
-          </svg>
+          />
         </motion.div>
 
         <motion.h1
