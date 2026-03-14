@@ -1,7 +1,7 @@
-import postgres from "postgres";
+import { neon } from "@neondatabase/serverless";
 
 export function getDb() {
-  return postgres(process.env.DATABASE_URL!, { ssl: "require" });
+  return neon(process.env.DATABASE_URL!);
 }
 
 export async function initDb() {

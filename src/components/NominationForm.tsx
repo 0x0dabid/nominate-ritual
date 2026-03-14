@@ -40,7 +40,7 @@ export default function NominationForm() {
         setFormData({ username: "", discord_id: "", role: "" });
       } else {
         setStatus("error");
-        setMessage(data.error || "Failed to submit nomination");
+        setMessage(data.details || data.error || "Failed to submit nomination");
       }
     } catch {
       setStatus("error");
