@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { getDb, initDb } from "@/lib/db";
+
+let dbInitialized = false;
+
+async function ensureDb() {
+  if (!dbInitialized) {
+    await initDb();
+    dbInitialized = true;
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDb();
+
     const body = await req.json();
     const { username, discord_id, role, nominator } = body;
 
@@ -46,7 +57,8 @@ export async function POST(req: NextRequest) {
       { success: true, id: result[0].id },
       { status: 201 }
     );
-  } catch {
+  } catch (err) {
+    console.error("Nomination error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

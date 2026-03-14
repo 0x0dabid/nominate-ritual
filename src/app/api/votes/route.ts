@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getDb } from "@/lib/db";
+import { getDb, initDb } from "@/lib/db";
+
+let dbInitialized = false;
+
+async function ensureDb() {
+  if (!dbInitialized) {
+    await initDb();
+    dbInitialized = true;
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDb();
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.discordId) {
       return NextResponse.json(
@@ -59,7 +70,8 @@ export async function POST(req: NextRequest) {
     `;
 
     return NextResponse.json({ success: true, votes: updated[0].votes });
-  } catch {
+  } catch (err) {
+    console.error("Vote error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
